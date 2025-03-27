@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8212FEC02D91CB6E00E84F0C /* SotoS3 in Frameworks */ = {isa = PBXBuildFile; productRef = 8212FEBF2D91CB6E00E84F0C /* SotoS3 */; };
 		8299D40B2D727E6A009A464F /* MySQLKit in Frameworks */ = {isa = PBXBuildFile; productRef = 8299D40A2D727E6A009A464F /* MySQLKit */; };
 		8299D40D2D727E89009A464F /* MySQLKit in Frameworks */ = {isa = PBXBuildFile; productRef = 8299D40C2D727E89009A464F /* MySQLKit */; };
 		8299D40F2D727EBF009A464F /* MySQLKit in Frameworks */ = {isa = PBXBuildFile; productRef = 8299D40E2D727EBF009A464F /* MySQLKit */; };
@@ -14,7 +15,6 @@
 		8299D42F2D762C5D009A464F /* CameraSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8299D42E2D762C5D009A464F /* CameraSection.swift */; };
 		8299D4312D762C7A009A464F /* FormSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8299D4302D762C7A009A464F /* FormSection.swift */; };
 		8299D4332D762C90009A464F /* AttestSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8299D4322D762C90009A464F /* AttestSection.swift */; };
-		8299D4352D767F38009A464F /* VialScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8299D4342D767F38009A464F /* VialScan.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,7 +42,6 @@
 		8299D42E2D762C5D009A464F /* CameraSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSection.swift; sourceTree = "<group>"; };
 		8299D4302D762C7A009A464F /* FormSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormSection.swift; sourceTree = "<group>"; };
 		8299D4322D762C90009A464F /* AttestSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttestSection.swift; sourceTree = "<group>"; };
-		8299D4342D767F38009A464F /* VialScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VialScan.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -69,6 +68,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8299D40B2D727E6A009A464F /* MySQLKit in Frameworks */,
+				8212FEC02D91CB6E00E84F0C /* SotoS3 in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -94,7 +94,6 @@
 		8299D37E2D6D416F009A464F = {
 			isa = PBXGroup;
 			children = (
-				8299D4342D767F38009A464F /* VialScan.swift */,
 				8299D42E2D762C5D009A464F /* CameraSection.swift */,
 				8299D4302D762C7A009A464F /* FormSection.swift */,
 				8299D4322D762C90009A464F /* AttestSection.swift */,
@@ -137,6 +136,7 @@
 			name = OCR_Scanner;
 			packageProductDependencies = (
 				8299D40A2D727E6A009A464F /* MySQLKit */,
+				8212FEBF2D91CB6E00E84F0C /* SotoS3 */,
 			);
 			productName = OCR_Scanner;
 			productReference = 8299D3872D6D416F009A464F /* OCR_Scanner.app */;
@@ -224,6 +224,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				8299D3EF2D727AC4009A464F /* XCRemoteSwiftPackageReference "mysql-kit" */,
+				8212FEBE2D91CB6E00E84F0C /* XCRemoteSwiftPackageReference "soto" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8299D3882D6D416F009A464F /* Products */;
@@ -268,7 +269,6 @@
 			files = (
 				8299D4332D762C90009A464F /* AttestSection.swift in Sources */,
 				8299D4292D762108009A464F /* CameraView.swift in Sources */,
-				8299D4352D767F38009A464F /* VialScan.swift in Sources */,
 				8299D42F2D762C5D009A464F /* CameraSection.swift in Sources */,
 				8299D4312D762C7A009A464F /* FormSection.swift in Sources */,
 			);
@@ -630,6 +630,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		8212FEBE2D91CB6E00E84F0C /* XCRemoteSwiftPackageReference "soto" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/soto-project/soto.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.5.0;
+			};
+		};
 		8299D3EF2D727AC4009A464F /* XCRemoteSwiftPackageReference "mysql-kit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/vapor/mysql-kit.git";
@@ -641,6 +649,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		8212FEBF2D91CB6E00E84F0C /* SotoS3 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8212FEBE2D91CB6E00E84F0C /* XCRemoteSwiftPackageReference "soto" */;
+			productName = SotoS3;
+		};
 		8299D40A2D727E6A009A464F /* MySQLKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 8299D3EF2D727AC4009A464F /* XCRemoteSwiftPackageReference "mysql-kit" */;

@@ -106,67 +106,210 @@ struct ContentView: View {
     @State private var currentUser = "TestUser"
     @State private var showVialScanForm = false
     @State private var savedRx: String = ""
+    @State private var capturedImages: [ScanType: UIImage] = [:]
+    @State private var currentScanType: ScanType = .largeLabel
+    @State private var vialRx: String = ""
+    @State private var rxMatchStatus: String = ""
+    @State private var showRxComparison = false
+    @State private var showRxAlert = false
+    @State private var rxAlertMessage = ""
+    @State private var matchedRx: String = ""
+    @State private var showNoRxAlert = false
+    @State private var isMatchedRxEditable = false
+    @State private var showRxInputAlert = false  // For the Yes/No popup
+    @State private var showSingleRxInput = false // For showing single RX input field
+    @State private var singleRxNumber = ""
+    @State private var isAttesting = false
+    @State private var attestationError: String?
+    @State private var alertTitle = ""
+    @State private var labelRxConfirmed = false
+    @State private var vialRxConfirmed = false
+    @State private var patientIdConfirmed = false
 
+
+    
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 25) {
-//                    CameraSection(
-//                        capturedImage: $capturedImage,
-//                        showCamera: $showCamera
-//                    )
-//                    
-//                    FormSection(formData: $formData)
-//                    
-//                    if isScanComplete {
-//                        AttestButton {
-//                            Task {
-//                                await saveToDatabase()
-//                            }
-//                        }
-//                    }
-//                }
-//                .padding()
-//            }
-//            .navigationTitle("OCR Form Scanner")
-//            .sheet(isPresented: $showCamera) {
-//                CameraView(image: $capturedImage, isShown: $showCamera) { image in
-//                    processImage(image)
-//                    isScanComplete = true
-//                }
-//            }
-            if !showVialScanForm {
-                                    // Main Form
-                                    CameraSection(
-                                        capturedImage: $capturedImage,
-                                        showCamera: $showCamera
-                                    )
-                                    
-                                    FormSection(formData: $formData)
-                                    
-                                    if isScanComplete {
-                                        AttestButton {
-                                            Task {
-                                                await saveToDatabase()
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    // Show Vial Scan after successful attestation
-                                    VialScanView(originalRx: savedRx)
+                VStack(spacing: 25) {  // Add VStack wrapper
+                    ForEach([ScanType.largeLabel, .coa, .vial], id: \.self) { scanType in
+                        VStack(spacing: 10) {
+                            if let image = capturedImages[scanType] {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxHeight: 150)
+                                    .cornerRadius(10)
+                            } else {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 30))
+                                    .foregroundColor(.blue)
+                                    .frame(height: 80)
+                            }
+                            
+                            Button(action: {
+                                currentScanType = scanType
+                                showCamera = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "camera.viewfinder")
+                                    Text(scanType.title)
                                 }
-                            }
-                            .padding()
-                        }
-                        // UPDATE NAVIGATION TITLE TO SHOW CORRECT FORM NAME
-                        .navigationTitle(showVialScanForm ? "Vial Scan" : "OCR Form Scanner")
-                        .sheet(isPresented: $showCamera) {
-                            CameraView(image: $capturedImage, isShown: $showCamera) { image in
-                                processImage(image)
-                                isScanComplete = true
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(capturedImages[scanType] == nil ? Color.blue : Color.green)
+                                .cornerRadius(8)
                             }
                         }
+                        .padding()
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(12)
+                    }
+                    
+                    // Add RX comparison section
+                    VStack {
+                        Text("RX Comparison")
+                            .font(.headline)
+                    VStack(alignment: .leading) {
+                        HStack {
+                            Text("Large Label RX:").font(.headline)
+                            TextField("Enter Label RX", text: $formData.rx)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .keyboardType(.numberPad)
+                        }
+                        HStack {
+                                    Image(systemName: labelRxConfirmed ? "checkmark.square.fill" : "square")
+                                        .foregroundColor(labelRxConfirmed ? .green : .gray)
+                                        .onTapGesture {
+                                            labelRxConfirmed.toggle()
+                                        }
+                                    Text("I confirm that RX number is same as on label")
+                                        .font(.caption)
+                                }
+                                .padding(.top, 4)
+                            }
+                        VStack(alignment: .leading) {
+                        HStack {
+                            Text("Vial RX:").font(.headline)
+                            TextField("Enter Vial RX", text: $formData.vialRx)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .keyboardType(.numberPad)
+                        }
+                        HStack {
+                                        Image(systemName: vialRxConfirmed ? "checkmark.square.fill" : "square")
+                                            .foregroundColor(vialRxConfirmed ? .green : .gray)
+                                            .onTapGesture {
+                                                vialRxConfirmed.toggle()
+                                            }
+                                        Text("I confirm that RX number is same as on vial")
+                                            .font(.caption)
+                                    }
+                                    .padding(.top, 4)
+                                }
+                        VStack(alignment: .leading) {
+                                        HStack {
+                                            Text("Patient ID:")
+                                                .font(.headline)
+                                            TextField("Enter Patient ID", text: $formData.patientID)
+                                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                        }
+                                        
+                                        // Checkbox for Patient ID
+                                        HStack {
+                                            Image(systemName: patientIdConfirmed ? "checkmark.square.fill" : "square")
+                                                .foregroundColor(patientIdConfirmed ? .green : .gray)
+                                                .onTapGesture {
+                                                    patientIdConfirmed.toggle()
+                                                }
+                                            Text("I confirm that Patient ID matches the large label")
+                                                .font(.caption)
+                                        }
+                                        .padding(.top, 4)
+                                    }
+                                    .padding(.horizontal)
+                                
+                        
+                        // CHANGE: Update status message based on RX comparison
+                        if !formData.rx.isEmpty && !formData.vialRx.isEmpty {
+                            if formData.rx == formData.vialRx {
+                                Label("RX Numbers Match!", systemImage: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            } else {
+                                Label("RX Numbers Don't Match! Please verify or scan correct vial",
+                                      systemImage: "xmark.circle.fill")
+                                .foregroundColor(.red)
+                            }
+                        } else {
+                            if formData.rx.isEmpty {
+                                Text("Please enter or scan Label RX")
+                                    .foregroundColor(.blue)
+                            }
+                            if formData.vialRx.isEmpty {
+                                Text("Please enter or scan Vial RX")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(12)
+                    
+                    // 
+                    VStack(spacing: 15) {
+                        Text("Matched RX Number:")
+                            .font(.headline)
+                        
+                        if formData.rx == formData.vialRx && !formData.rx.isEmpty {
+                            Text(formData.rx)
+                                .font(.title2)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(8)
+                            
+                            Text("By clicking Attest, I confirm that all information is correct and verified")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                            
+                            AttestButton(action: {
+                                Task {
+                                    await saveToDatabase()
+                                }
+                            }, isLoading: isAttesting)
+                        } else {
+                            Text("Waiting for matching RX numbers...")
+                                .foregroundColor(.gray)
+                                .padding()
+                        }
+                    }
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .shadow(radius: 2)
+                    
+                }
+                .padding()
+            }
+            .navigationTitle("OCR Form Scanner")
+            .sheet(isPresented: $showCamera) {
+                CameraView(
+                    image: Binding(
+                        get: { capturedImages[currentScanType] },
+                        set: { capturedImages[currentScanType] = $0 }
+                    ),
+                    isShown: $showCamera,
+                    scanType: currentScanType
+                ) { image in
+                    processImage(image)
+                    if currentScanType == .largeLabel {
+                        isScanComplete = true
+                    }
+                }
+            }
             .overlay(
                 Group {
                     if isLoading {
@@ -184,182 +327,439 @@ struct ContentView: View {
                     dismissButton: .default(Text("OK"))
                 )
             }
+            .alert("RX Number Check", isPresented: $showRxInputAlert) {
+                Button("Yes") {
+                    showSingleRxInput = true
+                }
+                Button("No") {
+                    let timestamp = Int(Date().timeIntervalSince1970)
+                    let autoRx = "MDCH\(timestamp)"
+                    formData.rx = autoRx
+                    formData.vialRx = autoRx
+                }
+            } message: {
+                Text("Did you find any RX number on papers?")
+            }
+            
+            // Add this alert for single RX input
+            .alert("Enter RX Number", isPresented: $showSingleRxInput) {
+                TextField("RX Number", text: $singleRxNumber)
+                    .keyboardType(.numberPad)
+                
+                Button("OK") {
+                    if !singleRxNumber.isEmpty {
+                        formData.rx = singleRxNumber
+                        formData.vialRx = singleRxNumber
+                        singleRxNumber = ""
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    singleRxNumber = ""
+                }
+            } message: {
+                Text("Please enter the RX number found on papers")
+            }
+            
+            .alert(isPresented: $showRxAlert) {
+                Alert(
+                    title: Text("RX Verification"),
+                    message: Text(rxAlertMessage),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
         }
-        .navigationViewStyle(StackNavigationViewStyle())
-    }
-    
-    private func processImage(_ image: UIImage) {
-        let startTime = CFAbsoluteTimeGetCurrent()
-        print("Starting image processing...")
-        isLoading = true
+        .navigationViewStyle(StackNavigationViewStyle()).alert(isPresented: $showAlert) {
+            Alert(
+                title: Text("Database Update"),
+                message: Text(alertMessage),
+                dismissButton: .default(Text("OK"))
+            )
+        }}
         
-        // Convert to CIImage
-        guard let ciImage = CIImage(image: image) else {
-            print("Failed to convert UIImage to CIImage")
-            isLoading = false
-            return
-        }
-        print("✅ Successfully converted to CIImage")
-        
-        // Create a Vision request
-        let request = VNRecognizeTextRequest { request, error in
-            if let error = error {
-                print("Text recognition error: \(error.localizedDescription)")
+        private func processImage(_ image: UIImage) {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            print("\n=== Starting \(currentScanType.title) Processing ===")
+            isLoading = true
+            
+            // Convert to CIImage
+            guard let ciImage = CIImage(image: image) else {
+                print("Failed to convert UIImage to CIImage")
                 isLoading = false
                 return
             }
+            print("✅ Successfully converted to CIImage")
             
-            guard let observations = request.results as? [VNRecognizedTextObservation] else {
-                print("No text found.")
-                isLoading = false
-                return
-            }
-            print("✅ Found \(observations.count) text observations")
-            
-            // Gather recognized text
-            let texts = observations.compactMap { observation in
-                observation.topCandidates(1).first?.string
-            }
-            print("📝 Recognized texts: \(texts)")
-            
-            DispatchQueue.main.async {
-                print("Starting text parsing...")  // Debug log
-                parseRecognizedText(texts)
-                print("✅ Finished parsing text")
-                isLoading = false
-            }
-        }
-        
-        // Use accurate recognition level
-        request.recognitionLevel = .accurate
-        print("Recognition level set to accurate")
-        
-        // Create request handler
-        let handler = VNImageRequestHandler(ciImage: ciImage, options: [:])
-        
-        // Perform request
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                print("Performing text recognition...")
-                try handler.perform([request])
-            } catch {
-                print("Failed to perform text recognition: \(error.localizedDescription)")
+            // Create a Vision request
+            let request = VNRecognizeTextRequest { request, error in
+                if let error = error {
+                    print("Text recognition error: \(error.localizedDescription)")
+                    isLoading = false
+                    return
+                }
+                
+                guard let observations = request.results as? [VNRecognizedTextObservation] else {
+                    print("No text found.")
+                    isLoading = false
+                    return
+                }
+                print("✅ Found \(observations.count) text observations")
+                
+                // Gather recognized text
+                let texts = observations.compactMap { observation in
+                    observation.topCandidates(1).first?.string
+                }
+                print("📝 Recognized texts: \(texts)")
+                
                 DispatchQueue.main.async {
+                    print("Starting text parsing...")
+                    
+                    // Handle different scan types
+                    switch currentScanType {
+                    case .largeLabel:
+                        parseRecognizedText(texts)  // Existing parsing logic
+                    case .coa:
+                        parseCOAText(texts)  // New COA parsing
+                    case .vial:
+                        parseVialText(texts)  // New vial parsing
+                    }
+                    
+                    print("✅ Finished parsing text")
                     isLoading = false
                 }
             }
-        }
-        let endTime = CFAbsoluteTimeGetCurrent()
-        print("Processing time: \(endTime - startTime) seconds")
-    }
-    
-    private func parseRecognizedText(_ texts: [String]) {
-        formData = FormData()
-        var bestPatientID: (value: String, confidence: Double) = ("", 0.0)
-        
-        for (index, text) in texts.enumerated() {
-            print("\nProcessing: \(text)")
             
-            // Use fuzzy matching to identify fields
-            if let (fieldType, confidence) = FieldMatcher.findField(in: text) {
-                print("Found field: \(fieldType) with confidence: \(confidence)")
-                
-                // Extract value (from same line or next line)
-                var value = ""
-                if let colonRange = text.range(of: ":|#|-", options: .regularExpression) {
-                    value = String(text[colonRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
-                } else if let nextText = texts[safe: index + 1] {
-                    value = nextText.trimmingCharacters(in: .whitespacesAndNewlines)
+            request.recognitionLevel = .accurate
+            print("Recognition level set to accurate")
+            
+            let handler = VNImageRequestHandler(ciImage: ciImage, options: [:])
+            
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    print("Performing text recognition...")
+                    try handler.perform([request])
+                } catch {
+                    print("Failed to perform text recognition: \(error.localizedDescription)")
+                    DispatchQueue.main.async {
+                        isLoading = false
+                    }
                 }
+            }
+            let endTime = CFAbsoluteTimeGetCurrent()
+            print("Processing time: \(endTime - startTime) seconds")
+        }
+        
+        private func parseRecognizedText(_ texts: [String]) {
+            formData = FormData()
+            var bestPatientID: (value: String, confidence: Double) = ("", 0.0)
+            
+            for (index, text) in texts.enumerated() {
+                print("\nProcessing: \(text)")
                 
-                // Update form data based on field type
-                switch fieldType {
-                case "Radiopharmaceutical":
-                    formData.Radiopharmaceutical = value
-                    print("✅ Study Name: \(value)")
-                case "Rx":
-                    formData.rx = value.replacingOccurrences(of: "[^0-9]", with: "")
-                    print("✅ Rx: \(value)")
-                case "PatientID":
-                    if confidence > bestPatientID.confidence && !value.isEmpty {
-                                            bestPatientID = (value, confidence)
-                                            print("✅ Better Patient ID found: \(value)")
-                                        }
-                case "ActualAmount":
-                    formData.ActualAmount = value  // Still sets ActualAmount in formData
-                    print("✅ Actual Amount: \(value)")
-                                    
-                case "CalibrationDate":
-                    formData.calibrationDate = value
-                    print("✅ Calibration Date: \(value)")
-                case "LotNumber":
-                    let cleanValue = value.replacingOccurrences(of: ":", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
-                    formData.lotNumber = cleanValue
-                    print("✅ Lot Number: \(cleanValue)")
-                case "OrderedAmount":
-                    formData.OrderedAmount = value
-                    print("✅ Ordered Amount: \(value)")
-                case "Volume":
-                    formData.Volume = value
-                    print("✅ Volume: \(value)")
-                case "Manufacturer":
-                    formData.Manufacturer = value
-                    print("✅ Manufacturer: \(value)")
-                default:
+                // Use fuzzy matching to identify fields
+                if let (fieldType, confidence) = FieldMatcher.findField(in: text) {
+                    print("Found field: \(fieldType) with confidence: \(confidence)")
+                    
+                    // Extract value (from same line or next line)
+                    var value = ""
+                    if let colonRange = text.range(of: ":|#|-", options: .regularExpression) {
+                        value = String(text[colonRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    } else if let nextText = texts[safe: index + 1] {
+                        value = nextText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                    
+                    // Update form data based on field type
+                    switch fieldType {
+                    case "Radiopharmaceutical":
+                        formData.Radiopharmaceutical = value
+                        print("✅ Study Name: \(value)")
+                    case "Rx":
+                        formData.rx = value.replacingOccurrences(of: "[^0-9]", with: "")
+                        print("✅ Rx: \(value)")
+                    case "PatientID":
+                        if confidence > bestPatientID.confidence && !value.isEmpty {
+                            bestPatientID = (value, confidence)
+                            print("✅ Better Patient ID found: \(value)")
+                        }
+                    case "ActualAmount":
+                        formData.ActualAmount = value  // Still sets ActualAmount in formData
+                        print("✅ Actual Amount: \(value)")
+                        
+                    case "CalibrationDate":
+                        formData.calibrationDate = value
+                        print("✅ Calibration Date: \(value)")
+                    case "LotNumber":
+                        let cleanValue = value.replacingOccurrences(of: ":", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+                        formData.lotNumber = cleanValue
+                        print("✅ Lot Number: \(cleanValue)")
+                    case "OrderedAmount":
+                        formData.OrderedAmount = value
+                        print("✅ Ordered Amount: \(value)")
+                    case "Volume":
+                        formData.Volume = value
+                        print("✅ Volume: \(value)")
+                    case "Manufacturer":
+                        formData.Manufacturer = value
+                        print("✅ Manufacturer: \(value)")
+                    default:
+                        break
+                    }
+                }
+            }
+            formData.patientID = bestPatientID.value
+            // Debug print results
+            print("\nExtracted Values (with fuzzy matching):")
+            print("Study Name: \(formData.Radiopharmaceutical)")
+            print("Rx: \(formData.rx)")
+            print("Patient ID: \(formData.patientID)")
+            print("Actual Amount: \(formData.ActualAmount)")
+            print("Calibration Date: \(formData.calibrationDate)")
+            print("Lot Number: \(formData.lotNumber)")
+            print("Ordered Amount: \(formData.OrderedAmount)")
+            print("Volume: \(formData.Volume)")
+            print("Manufacturer: \(formData.Manufacturer)")
+        }
+    
+        
+    private func parseCOAText(_ texts: [String]) {
+        print("\n=== Parsing COA Text ===")
+        var toc = ""
+//        var radioactiveConc = ""
+        
+        // Join all texts for easier searching
+        let fullText = texts.joined(separator: " ")
+        var coaRadioactiveConc = ""
+        
+        // Define our search patterns with fuzzy matching
+        let tocPatterns = [
+            "calibration date and time",
+            "calibration date",
+            "time of calibration",
+            "Specific Activity at toc"
+        ]
+        
+//        let rocPatterns = [
+//            "radioactivity concentration",
+//            "concentration at toc",
+//            "radioactive concentration",
+//            "activity concentration",
+//            "radioactive concentration at toc"
+//        ]
+        
+        // Search for TOC using fuzzy logic
+        for pattern in tocPatterns {
+            let confidence = FieldMatcher.calculateConfidence(fullText.lowercased(), pattern)
+            if confidence > 0.7 {
+                print("Found TOC pattern with confidence: \(confidence)")
+                // Now search for the actual date value
+                for text in texts {
+                    if text.contains("FEB") && text.contains("ET") && text.contains("2025") {
+                        toc = text
+                        print("✅ TOC found: \(toc)")
+                        break
+                    }
+                }
+                break
+            }
+        }
+        
+        // Search for ROC using fuzzy logic
+        for (index, text) in texts.enumerated() {
+                if text.contains("Radioactivity") && text.contains("Concentration") {
+                    for i in 1...3 {
+                        if let nextText = texts[safe: index + i], nextText.contains("Ci/mL") {
+                            coaRadioactiveConc = nextText
+                            formData.radioactivityConcentration = coaRadioactiveConc
+                            print("✅ Radioactive Concentration found: \(coaRadioactiveConc)")
+                            break
+                        }
+                    }
+                }
+            }
+        print("\n=== COA Extraction Results ===")
+        print("Time of Calibration (TOC): \(toc)")
+        print("Radioactive Concentration: \(coaRadioactiveConc)")
+    }
+        
+//
+    private func parseVialText(_ texts: [String]) {
+        print("\n=== Parsing Vial Text ===")
+        var foundRx = false
+        formData.vialRx = ""
+        
+        // First extract RX number as we were doing before
+        for text in texts {
+            let lowercasedText = text.lowercased()
+            if lowercasedText.contains("rx") || lowercasedText.contains("rx#"){
+                let numbers = text.components(separatedBy: CharacterSet.decimalDigits.inverted)
+                                .joined()
+                if !numbers.isEmpty {
+                    formData.vialRx = numbers
+                    foundRx = true
+                    print("✅ Found Vial RX: \(numbers)")
+                
+                        // Case 1: Both RXs exist - Check if they match
+                        if !formData.rx.isEmpty {
+                            if formData.rx == numbers {
+                                print("✅ RX numbers match!")
+                                rxAlertMessage = "RX numbers match!"
+                                showRxAlert = true
+                            } else {
+                                print("⚠️ Warning: RX numbers don't match!")
+                                rxAlertMessage = "RX numbers don't match! Please scan the correct vial or verify RX numbers"
+                                showRxAlert = true
+                            }
+                        }
+                        // Case 2: Vial RX exists but Label RX missing
+                        else {
+                            print("⚠️ No Label RX to compare with")
+                            rxAlertMessage = "No Label RX found. Please scan or enter Label RX"
+                            showRxAlert = true
+                        }
                     break
                 }
             }
         }
-        formData.patientID = bestPatientID.value
-        // Debug print results
-        print("\nExtracted Values (with fuzzy matching):")
-        print("Study Name: \(formData.Radiopharmaceutical)")
-        print("Rx: \(formData.rx)")
+        
+        // Case 3: No Vial RX found
+        if !foundRx {
+            // Case 3a: Label RX exists but no Vial RX
+            if !formData.rx.isEmpty {
+                formData.vialRx = ""
+                print("⚠️ No RX found in vial text")
+                rxAlertMessage = "No RX number found on vial. Please scan again or enter manually"
+                showRxAlert = true
+            }
+            // Case 4: Both RXs missing
+            else {
+                print("⚠️ No RX numbers found")
+//                rxAlertMessage = "No RX numbers found. Please scan or enter both Label and Vial RX"
+                showRxInputAlert = true
+            }
+        }
+        
+        print("=== Finished Parsing Vial ===")
+    }
+        
+        
+    private func saveToDatabase() async {
+        print("\n=== Starting Database Save ===")
+        
+        
+        guard labelRxConfirmed && vialRxConfirmed && patientIdConfirmed  else {
+                DispatchQueue.main.async {
+                    self.alertTitle = "Validation Error"
+                    self.alertMessage = "Please confirm both RX numbers by checking the boxes"
+                    self.showAlert = true
+                }
+                return
+            }
+        // Validate data first
+        guard !formData.rx.isEmpty,
+              !formData.patientID.isEmpty,
+              !formData.Radiopharmaceutical.isEmpty,
+              formData.rx == formData.vialRx else {
+            print("❌ Validation failed:")
+            print("RX: \(formData.rx)")
+            print("Vial RX: \(formData.vialRx)")
+            print("Patient ID: \(formData.patientID)")
+            print("Radiopharmaceutical: \(formData.Radiopharmaceutical)")
+            
+            DispatchQueue.main.async {
+                self.alertMessage = "Please fill in all required fields and ensure RX numbers match"
+                self.showAlert = true
+            }
+            return
+        }
+        
+        print("✅ Data validation passed")
+        print("Saving form data:")
+        print("RX: \(formData.rx)")
         print("Patient ID: \(formData.patientID)")
+        print("Radiopharmaceutical: \(formData.Radiopharmaceutical)")
         print("Actual Amount: \(formData.ActualAmount)")
         print("Calibration Date: \(formData.calibrationDate)")
         print("Lot Number: \(formData.lotNumber)")
         print("Ordered Amount: \(formData.OrderedAmount)")
         print("Volume: \(formData.Volume)")
         print("Manufacturer: \(formData.Manufacturer)")
-    }
-    
-    // Add the Array extension at the bottom of the file
-    
-    
-    private func saveToDatabase() async {
-        DatabaseManager.shared.saveFormData(formData: formData, currentUser: currentUser)
+        print("Radioactivity Concentration: \(formData.radioactivityConcentration)")
+        
+        DispatchQueue.main.async {
+            self.isAttesting = true
+        }
+        var imageUrls: [ScanType: String] = [:]
+        
+        do {
+                for (scanType, image) in capturedImages {
+                    let imageUrl = try await S3Manager.shared.uploadImage(
+                        image,
+                        rxNumber: formData.rx,
+                        scanType: scanType.toImageScanType()
+                    )
+                    imageUrls[scanType] = imageUrl
+                }
+        
+            DatabaseManager.shared.saveFormData(formData: formData, imageUrls: imageUrls, currentUser: currentUser)
             .map { _ in
+                print("✅ Database save successful")
                 DispatchQueue.main.async {
                     self.alertMessage = "Successfully saved to database"
                     self.showAlert = true
-                    print("✅ Data saved successfully")
                     self.savedRx = self.formData.rx
                     self.resetForm()
                     self.showVialScanForm = true
-}
+                    self.capturedImages = [:]
+                    self.isAttesting = false
+                }
             }
             .whenFailure { error in
+                print("❌ Database save failed: \(error)")
                 DispatchQueue.main.async {
                     self.alertMessage = "Error saving to database: \(error.localizedDescription)"
                     self.showAlert = true
-                    print("❌ Database error: \(error)")
+                    self.isAttesting = false
                 }
             }
-        
-    }
-    private func resetForm() {
-        print("Starting form reset...")
-        formData = FormData()
-        capturedImage = nil
-        isScanComplete = false
-        print("Form data after reset: \(formData)") // Debug print
-        print("isScanComplete after reset: \(isScanComplete)") // Debug print}
-    }
-    // Preview provider
-    struct ContentView_Previews: PreviewProvider {
-        static var previews: some View {
-            ContentView()
+    }catch {
+        print("❌ Image upload failed: \(error)")
+        DispatchQueue.main.async {
+            self.alertTitle = "Upload Error"
+            self.alertMessage = "Failed to upload images: \(error.localizedDescription)"
+            self.showAlert = true
+            self.isAttesting = false
         }
     }
 }
+        private func resetForm() {
+            print("Starting form reset...")
+            formData = FormData()
+            capturedImage = nil
+            isScanComplete = false
+            labelRxConfirmed = false  // Reset checkbox states
+            vialRxConfirmed = false
+            patientIdConfirmed = false
+            print("Form data after reset: \(formData)") // Debug print
+            print("isScanComplete after reset: \(isScanComplete)") // Debug print}
+        }
+        // Preview provider
+        struct ContentView_Previews: PreviewProvider {
+            static var previews: some View {
+                ContentView()
+            }
+        }
+    
+
+    private func isDataValid() -> Bool {
+        guard !formData.rx.isEmpty,
+              !formData.patientID.isEmpty,
+              !formData.Radiopharmaceutical.isEmpty,
+              formData.rx == formData.vialRx,  // Ensure RX numbers match
+              labelRxConfirmed,  // Add this
+              vialRxConfirmed
+        else {
+            return false
+        }
+        return true
+    }
+    }
+

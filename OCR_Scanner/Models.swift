@@ -16,5 +16,7 @@ struct FormData {
     var lotNumber: String = ""
     var OrderedAmount: String = ""
     var Volume: String = ""
-    var Manufacturer: String = ""   
+    var Manufacturer: String = ""
+    var vialRx: String = ""
+    var radioactivityConcentration: String = ""  
 }

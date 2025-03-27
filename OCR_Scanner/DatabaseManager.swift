@@ -47,7 +47,8 @@ class DatabaseManager {
         print("✅ SSL Configuration loaded successfully")
     }
     
-    func saveFormData(formData: FormData, currentUser: String) -> EventLoopFuture<Void> {
+    
+    func saveFormData(formData: FormData,imageUrls: [ScanType: String], currentUser: String) -> EventLoopFuture<Void> {
         guard let pools = pools else {
             return eventLoopGroup.next().makeFailedFuture(DatabaseError.notConnected)
         }
@@ -62,7 +63,7 @@ class DatabaseManager {
             
             return sql.raw(
                 """
-                INSERT INTO RadioPharma (
+                INSERT INTO Vial (
                     Radiopharmaceutical,
                     rx_number,
                     patient_id,
@@ -73,7 +74,11 @@ class DatabaseManager {
                     entered_date_time,
                     ordered_amount,
                     Manufacturer,
-                    volume
+                    volume,
+                    radioactivity_concentration,
+                    label_image_url,
+                    coa_image_url,
+                    vial_image_url
                 
                 ) VALUES (
                     \(bind: formData.Radiopharmaceutical),
@@ -86,7 +91,11 @@ class DatabaseManager {
                     \(bind: currentDateTime),
                     \(bind: formData.OrderedAmount),
                     \(bind: formData.Manufacturer),
-                    \(bind: formData.Volume)
+                    \(bind: formData.Volume),
+                    \(bind: formData.radioactivityConcentration),
+                    \(bind: imageUrls[.largeLabel] ?? ""),
+                    \(bind: imageUrls[.coa] ?? ""),
+                    \(bind: imageUrls[.vial] ?? "")
                 
                 )
                 """
