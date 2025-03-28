@@ -48,7 +48,7 @@ class DatabaseManager {
     }
     
     
-    func saveFormData(formData: FormData,imageUrls: [ScanType: String], currentUser: String) -> EventLoopFuture<Void> {
+    func saveFormData(formData: FormData, imageUrls: [ScanType: String], currentUser: String) -> EventLoopFuture<Void> {
         guard let pools = pools else {
             return eventLoopGroup.next().makeFailedFuture(DatabaseError.notConnected)
         }
@@ -59,11 +59,18 @@ class DatabaseManager {
             
             // Format the calibration date
             let formattedDate = self.formatDate(formData.calibrationDate)
+            let dateTimeParts = formattedDate.split(separator: " ")
+            let dateOnly = String(dateTimeParts[0])
+            let timeOnly = String(dateTimeParts[1])
+            
+            let volumeNumber = formData.Volume.components(separatedBy: CharacterSet.decimalDigits.union(CharacterSet(charactersIn: ".")).inverted)
+                        .joined()
             print("🔍 SQL binding date value: \(formattedDate)")
             
+            // First insert
             return sql.raw(
                 """
-                INSERT INTO Vial (
+                INSERT INTO vial (
                     Radiopharmaceutical,
                     rx_number,
                     patient_id,
@@ -78,8 +85,9 @@ class DatabaseManager {
                     radioactivity_concentration,
                     label_image_url,
                     coa_image_url,
-                    vial_image_url
-                
+                    vial_image_url,
+                    new_label_image_url,
+                    new_vial_image_url
                 ) VALUES (
                     \(bind: formData.Radiopharmaceutical),
                     \(bind: Int(formData.rx) ?? 0),
@@ -95,11 +103,41 @@ class DatabaseManager {
                     \(bind: formData.radioactivityConcentration),
                     \(bind: imageUrls[.largeLabel] ?? ""),
                     \(bind: imageUrls[.coa] ?? ""),
-                    \(bind: imageUrls[.vial] ?? "")
-                
+                    \(bind: imageUrls[.vial] ?? ""),
+                    \(bind: formData.newLabelImageUrl ?? ""),    
+                    \(bind: formData.newVialImageUrl ?? "") 
                 )
                 """
-            ).run()
+            ).run().flatMap { _ in
+                // Second insert
+                return sql.raw(
+                    """
+                    INSERT INTO dos_details (
+                        patientId,
+                        study_name,
+                        dateCalibration,
+                        timeCalibration,
+                        rac,
+                        manufacturer,
+                        rx_batch,
+                        lotBatch,
+                        volume,
+                        DOS
+                    ) VALUES (
+                        \(bind: formData.patientID),
+                        \(bind: formData.Radiopharmaceutical),
+                        \(bind: dateOnly),
+                        \(bind: timeOnly),
+                        \(bind: formData.radioactivityConcentration),
+                        \(bind: formData.Manufacturer),
+                        \(bind: Int(formData.rx) ?? 0),
+                        \(bind: formData.lotNumber),
+                        \(bind: volumeNumber),
+                        '2025-03-27'
+                    )
+                    """
+                ).run()
+            }
         }
     }
     private func formatDate(_ dateString: String) -> String {

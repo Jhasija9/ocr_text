@@ -18,5 +18,7 @@ struct FormData {
     var Volume: String = ""
     var Manufacturer: String = ""
     var vialRx: String = ""
-    var radioactivityConcentration: String = ""  
+    var radioactivityConcentration: String = ""
+    var newLabelImageUrl: String?
+    var newVialImageUrl: String?
 }
